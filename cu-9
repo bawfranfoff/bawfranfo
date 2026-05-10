@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>foufoof9ffcu🌐</title>
+
+<style>
+:root {
+    --bg: #000;
+    --blue: #2f6bff;
+    --red: #ff2a2a;
+    --yellow: #ffd400;
+    --panel: #0a0a0a;
+    --border: #1d3fa8;
+}
+
+body {
+    margin: 0;
+    padding: 30px;
+    background: var(--bg);
+    color: var(--blue);
+    font-family: Arial, sans-serif;
+}
+
+.wrap {
+    max-width: 900px;
+    margin: auto;
+}
+
+/* TITLE */
+
+.title {
+    font-size: 3rem;
+    margin-bottom: 25px;
+}
+
+.blue { color: var(--blue); }
+
+.red { color: var(--red); }
+
+.red-cursive {
+    color: var(--red);
+    font-family: cursive;
+    font-style: italic;
+    font-weight: bold;
+}
+
+.orb {
+    color: var(--yellow);
+    text-shadow: 0 0 10px #ffd400;
+}
+
+/* PANELS */
+
+.panel {
+    border: 1px solid var(--border);
+    padding: 15px;
+    margin-bottom: 15px;
+    border-radius: 10px;
+    background: var(--panel);
+}
+
+.row {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+input, select {
+    background: #050505;
+    color: var(--blue);
+    border: 1px solid var(--border);
+    padding: 8px;
+    border-radius: 6px;
+}
+
+button {
+    padding: 10px 15px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: #07163d;
+    color: var(--blue);
+    cursor: pointer;
+}
+
+button:hover {
+    border-color: var(--red);
+    color: var(--red);
+}
+
+.status { margin-top: 10px; }
+
+.download a {
+    color: var(--yellow);
+}
+</style>
+</head>
+
+<body>
+
+<div class="wrap">
+
+<!-- TITLE -->
+<h1 class="title">
+    <span class="blue">ff</span>
+    <span class="red">oocfy</span>
+    <span class="blue">f</span>
+    <span class="red-cursive">fu</span>
+    <span class="orb">🌐</span>
+</h1>
+
+<!-- UPLOAD -->
+<div class="panel">
+    <h3>upload</h3>
+    <input id="files" type="file" multiple accept=".wav,.mp3" />
+</div>
+
+<!-- CONFIG -->
+<div class="panel">
+    <h3>config</h3>
+
+    <div class="row">
+        <label>output</label>
+        <select id="outputType">
+            <option>wav</option>
+            <option>mp3</option>
+        </select>
+    </div>
+
+    <div class="row">
+        <label>threshold</label>
+        <input id="threshold" type="number" value="0.0003" step="0.00001">
+    </div>
+
+    <div class="row">
+        <label>noise</label>
+        <input id="noiseLevel" type="number" value="0.000001" step="0.0000001">
+    </div>
+
+    <!-- BPM -->
+    <div class="row">
+        <label><input type="checkbox" id="includeBPM"> include bpm</label>
+        <label><input type="checkbox" id="autoBPM"> auto bpm</label>
+    </div>
+
+    <div class="row">
+        <label>manual bpm</label>
+        <input id="manualBPM" placeholder="128">
+    </div>
+
+    <!-- KEY -->
+    <div class="row">
+        <label><input type="checkbox" id="includeKey"> include key</label>
+        <label><input type="checkbox" id="autoKey"> auto key</label>
+    </div>
+
+    <div class="row">
+        <label>manual key</label>
+        <input id="manualKey" placeholder="Am">
+    </div>
+
+    <!-- BARS -->
+    <div class="row">
+        <label><input type="checkbox" id="includeBars"> include bars</label>
+        <label><input type="checkbox" id="autoBars"> auto bars</label>
+    </div>
+
+    <div class="row">
+        <label>manual bars</label>
+        <input id="manualBars" placeholder="4">
+    </div>
+
+</div>
+
+<!-- RUN -->
+<div class="panel">
+    <button onclick="run()">process</button>
+    <div class="status" id="status">idle</div>
+    <div class="download" id="download"></div>
+</div>
+
+</div>
+
+<script>
+
+const API = "https://YOUR_API_ID.execute-api.ap-southeast-2.amazonaws.com";
+
+async function run() {
+    const files = document.getElementById("files").files;
+    if (!files.length) return;
+
+    const config = {
+        outputType: val("outputType"),
+        includeBPM: chk("includeBPM"),
+        autoDetectBPM: chk("autoBPM"),
+        manualBPM: val("manualBPM"),
+        includeKey: chk("includeKey"),
+        autoDetectKey: chk("autoKey"),
+        manualKey: val("manualKey"),
+        includeBars: chk("includeBars"),
+        autoDetectBars: chk("autoBars"),
+        manualBars: val("manualBars"),
+        threshold: Number(val("threshold")),
+        noiseLevel: Number(val("noiseLevel"))
+    };
+
+    setStatus("init upload...");
+
+    const init = await fetch(API + "/upload-init", {
+        method: "POST",
+        body: JSON.stringify({
+            files: [...files].map(f => ({name: f.name, type: f.type})),
+            config
+        })
+    }).then(r => r.json());
+
+    setStatus("uploading...");
+
+    for (let i = 0; i < init.uploads.length; i++) {
+        await fetch(init.uploads[i].url, {
+            method: "PUT",
+            body: files[i]
+        });
+    }
+
+    setStatus("processing...");
+
+    const result = await fetch(API + "/process", {
+        method: "POST",
+        body: JSON.stringify({
+            jobId: init.jobId,
+            inputKeys: init.uploads.map(u => u.key),
+            config
+        })
+    }).then(r => r.json());
+
+    setStatus("done");
+
+    document.getElementById("download").innerHTML =
+        `<a href="${result.downloadUrl}">download ${result.filename}</a>`;
+}
+
+function val(id){ return document.getElementById(id).value }
+function chk(id){ return document.getElementById(id).checked }
+function setStatus(s){ document.getElementById("status").innerText = s }
+
+</script>
+
+</body>
+</html>
